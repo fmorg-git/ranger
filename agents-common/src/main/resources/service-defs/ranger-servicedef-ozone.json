@@ -22,7 +22,10 @@
       "description":       "Ozone Volume",
       "isValidLeaf":       true,
       "accessTypeRestrictions": [
-        "read", "write", "create", "list", "delete", "read_acl", "write_acl", "all"
+        "read", "write", "create", "list", "delete", "read_acl", "write_acl", "all",
+        "GetObject", "PutObject", "DeleteObject", "GetObjectTagging", "PutObjectTagging", "DeleteObjectTagging",
+        "CreateBucket", "DeleteBucket", "GetBucketAcl", "PutBucketAcl", "ListBucket", "ListAllMyBuckets",
+        "ListBucketMultipartUploads", "ListMultipartUploadParts", "AbortMultipartUpload"
       ]
     },
     {
@@ -40,7 +43,10 @@
       "description":       "Ozone Bucket",
       "isValidLeaf":       true,
       "accessTypeRestrictions": [
-        "read", "write", "create", "list", "delete", "read_acl", "write_acl", "all"
+        "read", "write", "create", "list", "delete", "read_acl", "write_acl", "all",
+        "GetObject", "PutObject", "DeleteObject", "GetObjectTagging", "PutObjectTagging", "DeleteObjectTagging",
+        "CreateBucket", "DeleteBucket", "GetBucketAcl", "PutBucketAcl", "ListBucket", "ListAllMyBuckets",
+        "ListBucketMultipartUploads", "ListMultipartUploadParts", "AbortMultipartUpload"
       ]
     },
     {
@@ -59,7 +65,10 @@
       "description":        "Ozone Key",
       "isValidLeaf":        true,
       "accessTypeRestrictions": [
-        "read", "write", "create", "list", "delete", "read_acl", "write_acl", "all"
+        "read", "write", "create", "list", "delete", "read_acl", "write_acl", "all",
+        "GetObject", "PutObject", "DeleteObject", "GetObjectTagging", "PutObjectTagging", "DeleteObjectTagging",
+        "CreateBucket", "DeleteBucket", "GetBucketAcl", "PutBucketAcl", "ListBucket", "ListAllMyBuckets",
+        "ListBucketMultipartUploads", "ListMultipartUploadParts", "AbortMultipartUpload"
       ]
     },
     {
@@ -81,7 +90,7 @@
     }
   ],
   "accessTypes": [
-    { "itemId": 8, "name": "all",         "label": "All", "impliedGrants": [ "read", "write", "create", "list", "delete", "read_acl", "write_acl" ] },
+    { "itemId": 8, "name": "all",         "label": "All", "impliedGrants": [ "read", "write", "create", "list", "delete", "read_acl", "write_acl", "GetObject", "PutObject", "DeleteObject", "GetObjectTagging", "PutObjectTagging", "DeleteObjectTagging", "CreateBucket", "DeleteBucket", "GetBucketAcl", "PutBucketAcl", "ListBucket", "ListAllMyBuckets", "ListBucketMultipartUploads", "ListMultipartUploadParts", "AbortMultipartUpload" ] },
     { "itemId": 1, "name": "read",        "label": "Read",        "category": "READ" },
     { "itemId": 2, "name": "write",       "label": "Write",       "category": "UPDATE" },
     { "itemId": 3, "name": "create",      "label": "Create",      "category": "CREATE" },
@@ -89,7 +98,22 @@
     { "itemId": 5, "name": "delete",      "label": "Delete",      "category": "DELETE" },
     { "itemId": 6, "name": "read_acl",    "label": "Read_ACL",    "category": "READ" },
     { "itemId": 7, "name": "write_acl",   "label": "Write_ACL",   "category": "UPDATE" },
-    { "itemId": 9, "name": "assume_role", "label": "Assume_Role", "category": "MANAGE" }
+    { "itemId": 9, "name": "assume_role", "label": "Assume_Role", "category": "MANAGE" },
+    { "itemId": 10, "name": "GetObject", "label": "GetObject", "category": "READ" },
+    { "itemId": 11, "name": "PutObject", "label": "PutObject", "category": "UPDATE" },
+    { "itemId": 12, "name": "DeleteObject", "label": "DeleteObject", "category": "DELETE" },
+    { "itemId": 13, "name": "GetObjectTagging", "label": "GetObjectTagging", "category": "READ" },
+    { "itemId": 14, "name": "PutObjectTagging", "label": "PutObjectTagging", "category": "UPDATE" },
+    { "itemId": 15, "name": "DeleteObjectTagging", "label": "DeleteObjectTagging", "category": "DELETE" },
+    { "itemId": 16, "name": "CreateBucket", "label": "CreateBucket", "category": "CREATE" },
+    { "itemId": 17, "name": "DeleteBucket", "label": "DeleteBucket", "category": "DELETE" },
+    { "itemId": 18, "name": "GetBucketAcl", "label": "GetBucketAcl", "category": "READ" },
+    { "itemId": 19, "name": "PutBucketAcl", "label": "PutBucketAcl", "category": "UPDATE" },
+    { "itemId": 20, "name": "ListBucket", "label": "ListBucket", "category": "READ" },
+    { "itemId": 21, "name": "ListAllMyBuckets", "label": "ListAllMyBuckets", "category": "READ" },
+    { "itemId": 22, "name": "ListBucketMultipartUploads", "label": "ListBucketMultipartUploads", "category": "READ" },
+    { "itemId": 23, "name": "ListMultipartUploadParts", "label": "ListMultipartUploadParts", "category": "READ" },
+    { "itemId": 24, "name": "AbortMultipartUpload", "label": "AbortMultipartUpload", "category": "DELETE" }
   ],
   "configs": [
     { "itemId": 1, "name": "username",                       "type": "string",   "mandatory": true, "label": "Username" },

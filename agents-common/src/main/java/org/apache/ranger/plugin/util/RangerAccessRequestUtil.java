@@ -59,6 +59,7 @@ public class RangerAccessRequestUtil {
     public static final  String KEY_CONTEXT_IS_REQUEST_PREPROCESSED          = "ISREQUESTPREPROCESSED";
     public static final  String KEY_CONTEXT_RESOURCE_ZONE_NAMES              = "RESOURCE_ZONE_NAMES";
     public static final  String KEY_CONTEXT_ACL_ENFORCER                     = "_ACL_ENFORCER";
+    public static final  String KEY_CONTEXT_FALLBACK_ACCESS_TYPE             = "ranger.fallbackAccessType";
 
     private RangerAccessRequestUtil() {
         // to avoid instantiation
@@ -466,6 +467,22 @@ public class RangerAccessRequestUtil {
                 context.put(KEY_CONTEXT_ACL_ENFORCER, aclEnforcer);
             } else {
                 context.remove(KEY_CONTEXT_ACL_ENFORCER);
+            }
+        }
+    }
+
+    public static String getFallbackAccessTypeFromContext(Map<String, Object> context) {
+        Object val = context != null ? context.get(KEY_CONTEXT_FALLBACK_ACCESS_TYPE) : null;
+
+        return val instanceof String ? (String) val : null;
+    }
+
+    public static void setFallbackAccessTypeInContext(Map<String, Object> context, String fallbackAccessType) {
+        if (context != null) {
+            if (fallbackAccessType != null) {
+                context.put(KEY_CONTEXT_FALLBACK_ACCESS_TYPE, fallbackAccessType);
+            } else {
+                context.remove(KEY_CONTEXT_FALLBACK_ACCESS_TYPE);
             }
         }
     }

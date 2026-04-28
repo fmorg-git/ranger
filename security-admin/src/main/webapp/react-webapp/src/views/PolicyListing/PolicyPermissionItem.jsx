@@ -51,6 +51,39 @@ const noneOptions = {
   value: "none"
 };
 
+const LEGACY_ORDER = [
+  "read",
+  "write",
+  "create",
+  "list",
+  "delete",
+  "read_acl",
+  "write_acl",
+  "all"
+];
+
+const LEGACY_RANK = new Map(LEGACY_ORDER.map((v, i) => [v, i]));
+
+const legacyComparator = (a, b) => {
+  const aIsLegacy = LEGACY_RANK.has(a.value);
+  const bIsLegacy = LEGACY_RANK.has(b.value);
+
+  if (aIsLegacy && bIsLegacy) {
+    return LEGACY_RANK.get(a.value) - LEGACY_RANK.get(b.value);
+  }
+  if (aIsLegacy) {
+    return -1;
+  }
+  if (bIsLegacy) {
+    return 1;
+  }
+
+  const aKey = a.label || a.value;
+  const bKey = b.label || b.value;
+
+  return aKey.localeCompare(bKey, undefined, { sensitivity: "base" });
+};
+
 export default function PolicyPermissionItem(props) {
   const {
     addPolicyItem,
@@ -184,10 +217,14 @@ export default function PolicyPermissionItem(props) {
         }
       }
     }
-    return srcOp.map(({ label, name: value }) => ({
+    const options = srcOp.map(({ label, name: value }) => ({
       label,
       value
     }));
+
+    options.sort(legacyComparator);
+
+    return options;
   };
 
   const getMaskingAccessTypeOptions = (index) => {

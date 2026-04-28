@@ -40,6 +40,7 @@ import org.apache.ranger.plugin.policyengine.RangerAccessResourceImpl;
 import org.apache.ranger.plugin.policyengine.RangerAccessResult;
 import org.apache.ranger.plugin.service.RangerBasePlugin;
 import org.apache.ranger.plugin.util.JsonUtilsV2;
+import org.apache.ranger.plugin.util.RangerAccessRequestUtil;
 import org.apache.ranger.plugin.util.RangerPerfTracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,6 +48,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -142,11 +144,12 @@ public class RangerOzoneAuthorizer implements IAccessAuthorizer {
             perf = RangerPerfTracer.getPerfTracer(PERF_OZONEAUTH_REQUEST_LOG, String.format("RangerOzoneAuthorizer.authorize(resource = %s)", resource));
         }
 
-        Date   eventTime  = new Date();
-        String accessType = mapToRangerAccessType(operation);
+        final Date   eventTime        = new Date();
+        final String s3Action         = context.getS3Action();
+        final String legacyAccessType = mapToRangerAccessType(operation);
 
-        if (accessType == null) {
-            String message = String.format("Unsupported access type. operation = %s", operation);
+        if (StringUtils.isBlank(s3Action) && legacyAccessType == null) {
+            String message = String.format("Unsupported access type. operation = %s, s3Action = %s", operation, s3Action);
 
             MiscUtil.logErrorMessageByInterval(LOG, message);
             LOG.error("{}, resource = {}", message, resource);
@@ -167,10 +170,11 @@ public class RangerOzoneAuthorizer implements IAccessAuthorizer {
 
         rangerResource.setOwnerUser(context.getOwnerName());
         rangerRequest.setResource(rangerResource);
-        rangerRequest.setAccessType(accessType);
-        rangerRequest.setAction(accessType);
         rangerRequest.setRequestData(resource);
         rangerRequest.setClusterName(clusterName);
+        if (legacyAccessType != null) {
+            RangerAccessRequestUtil.setFallbackAccessTypeInContext(rangerRequest.getContext(), legacyAccessType);
+        }
 
         if (ozoneObj.getResourceType() == OzoneObj.ResourceType.VOLUME) {
             rangerResource.setValue(KEY_RESOURCE_VOLUME, ozoneObj.getVolumeName());
@@ -191,16 +195,32 @@ public class RangerOzoneAuthorizer implements IAccessAuthorizer {
         }
 
         try {
-            if (StringUtils.isNotBlank(context.getSessionPolicy())) {
-                rangerRequest.setInlinePolicy(JsonUtilsV2.jsonToObj(context.getSessionPolicy(), RangerInlinePolicy.class));
+            final boolean hasInlinePolicy = StringUtils.isNotBlank(context.getSessionPolicy());
+
+            if (hasInlinePolicy) {
+                rangerRequest.setInlinePolicy(
+                    JsonUtilsV2.jsonToObj(context.getSessionPolicy(), RangerInlinePolicy.class));
             }
 
-            RangerAccessResult result = plugin.isAccessAllowed(rangerRequest);
+            RangerAccessResult finalResult = null;
 
-            if (result == null) {
-                LOG.error("Ranger Plugin returned null. Returning false");
+            if (StringUtils.isNotBlank(s3Action)) {
+                finalResult = evalAccess(plugin, rangerRequest, s3Action);
+            }
+
+            if ((finalResult == null || !finalResult.getIsAllowed())
+                && legacyAccessType != null
+                && !(hasInlinePolicy && StringUtils.isNotBlank(s3Action))) {
+                finalResult = evalAccess(plugin, rangerRequest, legacyAccessType);
+            }
+
+            if (finalResult != null) {
+                returnValue = finalResult.getIsAllowed();
+                if (plugin.getResultProcessor() != null) {
+                    plugin.getResultProcessor().processResult(finalResult);
+                }
             } else {
-                returnValue = result.getIsAllowed();
+                LOG.error("Ranger Plugin returned null. Returning false");
             }
         } catch (Throwable t) {
             LOG.error("Error while calling isAccessAllowed(). request = {}", rangerRequest, t);
@@ -211,6 +231,12 @@ public class RangerOzoneAuthorizer implements IAccessAuthorizer {
         LOG.debug("rangerRequest = {}, return = {}", rangerRequest, returnValue);
 
         return returnValue;
+    }
+
+    private RangerAccessResult evalAccess(RangerBasePlugin plugin, RangerAccessRequestImpl request, String accessType) {
+        request.setAccessType(accessType);
+        request.setAction(accessType);
+        return plugin.isAccessAllowed(request, null);
     }
 
     @Override
@@ -309,7 +335,13 @@ public class RangerOzoneAuthorizer implements IAccessAuthorizer {
             ret.setResources(ozoneGrant.getObjects().stream().map(o -> toRrn(o, plugin)).filter(Objects::nonNull).collect(Collectors.toSet()));
         }
 
-        if (ozoneGrant.getPermissions() != null) {
+        if (ozoneGrant.getS3Actions() != null && !ozoneGrant.getS3Actions().isEmpty()) {
+            Set<String> s3Actions = new HashSet<>(ozoneGrant.getS3Actions());
+            if (s3Actions.remove("*")) {
+                s3Actions.add("all");
+            }
+            ret.setPermissions(s3Actions);
+        } else if (ozoneGrant.getPermissions() != null) {
             ret.setPermissions(ozoneGrant.getPermissions().stream().map(RangerOzoneAuthorizer::toRangerPermission).filter(Objects::nonNull).collect(Collectors.toSet()));
         }
 

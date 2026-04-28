@@ -201,4 +201,31 @@ public class TestRangerOzoneAuthorizer {
         assertTrue(ozoneAuthorizer.checkAccess(buck1, ctxListWithSessionPolicy), "session-policy should allow list on bucket vol1/buck1");
         assertTrue(ozoneAuthorizer.checkAccess(key1, ctxReadWithSessionPolicy), "session-policy should allow read on key vol1/buck1/key1");
     }
+
+    @Test
+    public void testAssumeRoleWithS3ActionGrantAndLegacyRoleAccess() throws Exception {
+        final Set<OzoneGrant> grants = Collections.singleton(
+                new OzoneGrant(Collections.singleton(key1),
+                        Collections.singleton(IAccessAuthorizer.ACLType.READ),
+                        Collections.singleton("GetObject")));
+        final AssumeRoleRequest request = new AssumeRoleRequest(hostname, ipAddress, user1, role1, grants);
+
+        // user1 should be allowed to assume role1 - Ranger policy #100 grants this permission
+        final String sessionPolicy = ozoneAuthorizer.generateAssumeRoleSessionPolicy(request);
+
+        assertNotNull(sessionPolicy);
+        assertNotEquals("", sessionPolicy);
+
+        final RequestContext ctxGetObjectWithSessionPolicy = reqCtxBuilder
+                .setAclRights(IAccessAuthorizer.ACLType.READ)
+                .setRecursiveAccessCheck(false)
+                .setS3Action("GetObject")
+                .setSessionPolicy(sessionPolicy)
+                .build();
+
+        // The grantor check must allow this using legacy 'read' permission on role1,
+        // while the inline policy grant enforces the fine-grained 'GetObject' permission.
+        assertTrue(ozoneAuthorizer.checkAccess(key1, ctxGetObjectWithSessionPolicy),
+                "session-policy should allow GetObject on key vol1/buck1/key1 when role has legacy read");
+    }
 }

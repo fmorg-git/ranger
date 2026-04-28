@@ -95,36 +95,51 @@ public class RangerInlinePolicyEvaluator {
     }
 
     private boolean isAllowed(RangerAccessRequest request) {
-        boolean ret = isAllowedForGrantor(request);
+        if (!isAllowedForGrantor(request)) {
+            return false;
+        }
 
-        if (ret && !grants.isEmpty()) {
-            for (GrantEvaluator evaluator : grants) {
-                ret = evaluator.isAllowed(request);
+        if (grants.isEmpty()) {
+            return true;
+        }
 
-                if (ret) {
-                    break;
-                }
+        for (GrantEvaluator evaluator : grants) {
+            if (evaluator.isAllowed(request)) {
+                return true;
             }
         }
 
-        return ret;
+        return false;
     }
 
     private boolean isAllowedForGrantor(RangerAccessRequest request) {
-        final boolean         ret;
         final RangerPrincipal grantor = RangerPrincipal.toPrincipal(policy.getGrantor());
 
-        if (grantor != null) {
-            try (RangerGrantorAccessRequest grantorAccessReq = new RangerGrantorAccessRequest(request, grantor)) {
-                RangerAccessResult result = policyEngine.evaluatePolicies(grantorAccessReq, RangerPolicy.POLICY_TYPE_ACCESS, null);
-
-                ret = result != null && result.getIsAccessDetermined() && result.getIsAllowed();
-            }
-        } else {
-            ret = true;
+        if (grantor == null) {
+            return true;
         }
 
-        return ret;
+        if (isAllowedForGrantor(request, grantor, request != null ? request.getAccessType() : null)) {
+            return true;
+        }
+
+        if (request != null) {
+            final String fallbackAccessType = RangerAccessRequestUtil.getFallbackAccessTypeFromContext(request.getContext());
+
+            if (StringUtils.isNotBlank(fallbackAccessType) && !StringUtils.equals(fallbackAccessType, request.getAccessType())) {
+                return isAllowedForGrantor(request, grantor, fallbackAccessType);
+            }
+        }
+
+        return false;
+    }
+
+    private boolean isAllowedForGrantor(RangerAccessRequest request, RangerPrincipal grantor, String accessType) {
+        try (RangerGrantorAccessRequest grantorAccessReq = new RangerGrantorAccessRequest(request, grantor, accessType)) {
+            RangerAccessResult result = policyEngine.evaluatePolicies(grantorAccessReq, RangerPolicy.POLICY_TYPE_ACCESS, null);
+
+            return result != null && result.getIsAccessDetermined() && result.getIsAllowed();
+        }
     }
 
     private StringBuilder toString(StringBuilder sb) {
@@ -265,7 +280,11 @@ public class RangerInlinePolicyEvaluator {
         private final Set<String> savedUserRoles;
 
         public RangerGrantorAccessRequest(RangerAccessRequest request, RangerPrincipal grantor) {
-            super(request, request.getAccessType());
+            this(request, grantor, request != null ? request.getAccessType() : null);
+        }
+
+        public RangerGrantorAccessRequest(RangerAccessRequest request, RangerPrincipal grantor, String accessType) {
+            super(request, accessType);
 
             user       = grantor.getType() == RangerPrincipal.PrincipalType.USER ? grantor.getName() : "";
             userGroups = grantor.getType() == RangerPrincipal.PrincipalType.GROUP ? Collections.singleton(grantor.getName()) : Collections.emptySet();
