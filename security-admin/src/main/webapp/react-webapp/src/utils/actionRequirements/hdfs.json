@@ -1,0 +1,14 @@
+{
+  "open": ["read"],
+  "liststatus": ["read", "execute"],
+  "listencryptionzones": ["read"],
+  "append": ["write"],
+  "create": ["write"],
+  "delete": ["write"],
+  "mkdirs": ["write"],
+  "rename": ["write"],
+  "setowner": ["write"],
+  "setpermission": ["write"],
+  "setreplication": ["write"],
+  "write": ["write"]
+}

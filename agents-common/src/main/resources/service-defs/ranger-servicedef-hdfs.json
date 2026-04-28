@@ -59,5 +59,15 @@
         { "itemId": 3, "name": "privacy",        "label": "Privacy" }
       ]
     }
+  ],
+  "policyConditions": [
+    {
+      "itemId":      1,
+      "name":        "action-matches",
+      "evaluator":   "org.apache.ranger.plugin.conditionevaluator.RangerActionMatcher",
+      "label":       "Action",
+      "description": "Action",
+      "uiHint":      "{ \"isMultiValue\":true, \"options\": [\"append\", \"create\", \"delete\", \"listEncryptionZones\", \"listStatus\", \"mkdirs\", \"open\", \"rename\", \"setOwner\", \"setPermission\", \"setReplication\", \"WRITE\"], \"actionRequirementsFile\": \"hdfs\" }"
+    }
   ]
 }

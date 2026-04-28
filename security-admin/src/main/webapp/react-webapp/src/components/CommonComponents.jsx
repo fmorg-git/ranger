@@ -492,6 +492,18 @@ export const scrollToError = (selector) => {
 };
 
 export const selectInputCustomStyles = {
+  control: (base) => ({
+    ...base,
+    flexWrap: "wrap"
+  }),
+  valueContainer: (base) => ({
+    ...base,
+    flexWrap: "wrap"
+  }),
+  multiValue: (base) => ({
+    ...base,
+    maxWidth: "100%"
+  }),
   option: (base) => ({
     ...base,
     textOverflow: "unset",

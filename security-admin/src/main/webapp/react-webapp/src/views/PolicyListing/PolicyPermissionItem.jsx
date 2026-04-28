@@ -45,6 +45,7 @@ import {
   policyConditionUpdatedJSON
 } from "Utils/XAUtils";
 import { selectInputCustomStyles } from "Components/CommonComponents";
+import { getSelectedLeafResourceTypes, getSelectedAccessTypesForRow } from "Utils/policyConditionUtils";
 
 const noneOptions = {
   label: "None",
@@ -114,6 +115,10 @@ export default function PolicyPermissionItem(props) {
     grpResourcesKeys = grpResourcesKeys.sort();
     return grpResourcesKeys;
   }, []);
+
+  const leafResourceTypes = useMemo(() => {
+    return getSelectedLeafResourceTypes(serviceCompDetails, formValues);
+  }, [serviceCompDetails, formValues]);
 
   const getAccessTypeOptions = () => {
     let srcOp = [],
@@ -469,6 +474,14 @@ export default function PolicyPermissionItem(props) {
                                         conditionDefVal={policyConditionUpdatedJSON(
                                           serviceCompDetails.policyConditions
                                         )}
+                                        servicedefName={serviceCompDetails?.name}
+                                        actionFilterContext={{
+                                          selectedAccessTypes:
+                                            getSelectedAccessTypesForRow(formValues, attrName, index),
+                                          leafResourceTypes,
+                                          accessTypeDefs:
+                                            serviceCompDetails?.accessTypes
+                                        }}
                                         selectProps={{ isMulti: true }}
                                       />
                                     </div>

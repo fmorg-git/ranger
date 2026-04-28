@@ -34,6 +34,7 @@ import Select from "react-select";
 import { InfoIcon } from "Utils/XAUtils";
 import { RegexMessage } from "Utils/XAMessages";
 import { selectInputCustomStyles } from "Components/CommonComponents";
+import { sortPolicyConditions, buildActionReqsMapFromConditionDef, getActionMatchesOptions, pruneSelectedActionMatches } from "Utils/policyConditionUtils";
 
 const esprima = require("esprima");
 const TYPE_SELECT = "select";
@@ -149,8 +150,16 @@ const InputBoxComp = (props) => {
 };
 
 const CustomCondition = (props) => {
-  const { value, valRef, conditionDefVal, selectProps, validExpression } =
-    props;
+  const {
+    value,
+    valRef,
+    conditionDefVal,
+    selectProps,
+    validExpression,
+    servicedefName,
+    actionFilterContext,
+    actionReqsMap = {}
+  } = props;
   const tagAccessData = (val, key) => {
     if (!isObject(valRef.current)) {
       valRef.current = {};
@@ -161,7 +170,7 @@ const CustomCondition = (props) => {
   return (
     <>
       {conditionDefVal?.length > 0 &&
-        conditionDefVal.map((m) => {
+        sortPolicyConditions(conditionDefVal).map((m) => {
           let uiHintAttb =
             m.uiHint != undefined && m.uiHint != "" ? JSON.parse(m.uiHint) : "";
           if (uiHintAttb != "") {
@@ -284,9 +293,37 @@ const CustomCondition = (props) => {
               );
             }
             if (uiHintAttb?.isMultiValue) {
+              const fixedOptions = Array.isArray(uiHintAttb?.options)
+                ? uiHintAttb.options
+                : null;
+              
+              const dropdownOptions = fixedOptions 
+                ? (m.name === "action-matches"
+                    ? getActionMatchesOptions({
+                        servicedefName,
+                        baseOptions: fixedOptions,
+                        actionFilterContext,
+                        actionRequirements: actionReqsMap[m.name] || uiHintAttb?.actionRequirements
+                      })
+                    : fixedOptions
+                  ).map((v) => ({ label: v, value: v }))
+                : null;
+
               const [selectedInputVal, setSelectVal] = useState(
                 value?.[m.name] || []
               );
+              
+              const allowedValueSet = dropdownOptions
+                ? new Set(dropdownOptions.map((o) => o.value))
+                : null;
+              
+              const displayedValue =
+                m.name === "action-matches" && allowedValueSet && Array.isArray(selectedInputVal)
+                  ? pruneSelectedActionMatches({ selected: selectedInputVal, allowedOptions: Array.from(allowedValueSet) })
+                  : allowedValueSet && Array.isArray(selectedInputVal)
+                  ? selectedInputVal.filter((o) => allowedValueSet.has(o?.value))
+                  : selectedInputVal;
+
               const handleChange = (e, name) => {
                 setSelectVal(e);
                 tagAccessData(e, name);
@@ -299,36 +336,51 @@ const CustomCondition = (props) => {
                     key={m.name}
                   >
                     <b>{m.label}:</b>
-                    <CreatableSelect
-                      {...selectProps}
-                      value={selectedInputVal || null}
-                      onChange={(e) => {
-                        setSelectVal(e);
-                        handleChange(e, m.name);
-                      }}
-                      placeholder=""
-                      width="500px"
-                      isClearable={false}
-                      styles={selectInputCustomStyles}
-                      formatCreateLabel={(inputValue) =>
-                        `Create "${inputValue.trim()}"`
-                      }
-                      onCreateOption={(inputValue) => {
-                        const trimmedValue = inputValue.trim();
-                        if (trimmedValue) {
-                          const newOption = {
-                            label: trimmedValue,
-                            value: trimmedValue
-                          };
-                          const currentValues = selectedInputVal || [];
-                          const newValues = Array.isArray(currentValues)
-                            ? [...currentValues, newOption]
-                            : [newOption];
-                          setSelectVal(newValues);
-                          tagAccessData(newValues, m.name);
+                    {dropdownOptions ? (
+                      <Select
+                        {...selectProps}
+                        value={displayedValue || null}
+                        onChange={(e) => {
+                          setSelectVal(e);
+                          handleChange(e, m.name);
+                        }}
+                        options={dropdownOptions}
+                        placeholder=""
+                        isClearable={false}
+                        styles={selectInputCustomStyles}
+                      />
+                    ) : (
+                      <CreatableSelect
+                        {...selectProps}
+                        value={displayedValue || null}
+                        onChange={(e) => {
+                          setSelectVal(e);
+                          handleChange(e, m.name);
+                        }}
+                        placeholder=""
+                        width="500px"
+                        isClearable={false}
+                        styles={selectInputCustomStyles}
+                        formatCreateLabel={(inputValue) =>
+                          `Create "${inputValue.trim()}"`
                         }
-                      }}
-                    />
+                        onCreateOption={(inputValue) => {
+                          const trimmedValue = inputValue.trim();
+                          if (trimmedValue) {
+                            const newOption = {
+                              label: trimmedValue,
+                              value: trimmedValue
+                            };
+                            const currentValues = selectedInputVal || [];
+                            const newValues = Array.isArray(currentValues)
+                              ? [...currentValues, newOption]
+                              : [newOption];
+                            setSelectVal(newValues);
+                            tagAccessData(newValues, m.name);
+                          }
+                        }}
+                      />
+                    )}
                   </Form.Group>
                 </div>
               );
@@ -387,7 +439,8 @@ const Editable = (props) => {
     options = [],
     conditionDefVal,
     servicedefName,
-    isGDS
+    isGDS,
+    actionFilterContext
   } = props;
 
   const initialLoad = useRef(true);
@@ -400,6 +453,8 @@ const Editable = (props) => {
   const [state, dispatch] = useReducer(reducer, props, initialState);
   const { show, value, target } = state;
   let isListenerAttached = false;
+
+  const actionReqsMap = React.useMemo(() => buildActionReqsMapFromConditionDef(conditionDefVal), [conditionDefVal]);
 
   const handleClickOutside = (e) => {
     if (
@@ -685,6 +740,31 @@ const Editable = (props) => {
         });
         if (conditionObj != undefined && conditionObj?.uiHint != "") {
           uiHintVal = JSON.parse(conditionObj.uiHint);
+
+          if (
+            conditionObj.name === "action-matches" &&
+            uiHintVal?.isMultiValue &&
+            Array.isArray(uiHintVal?.options) &&
+            actionFilterContext?.selectedAccessTypes
+          ) {
+            const allowedActions = getActionMatchesOptions({
+              servicedefName,
+              baseOptions: uiHintVal.options,
+              actionFilterContext,
+              actionRequirements: actionReqsMap[conditionObj.name] || uiHintVal.actionRequirements
+            });
+            const current = selectValRef.current[conditionObj.name];
+            
+            if (Array.isArray(current)) {
+              const pruned = pruneSelectedActionMatches({ selected: current, allowedOptions: allowedActions });
+              if (pruned.length > 0) {
+                selectValRef.current[conditionObj.name] = pruned;
+              } else {
+                delete selectValRef.current[conditionObj.name];
+              }
+            }
+          }
+
           if (
             uiHintVal?.isMultiline &&
             selectValRef.current[conditionObj.name] != "" &&
@@ -752,6 +832,9 @@ const Editable = (props) => {
             conditionDefVal={props.conditionDefVal}
             selectProps={props.selectProps}
             validExpression={validExpression}
+            servicedefName={servicedefName}
+            actionFilterContext={actionFilterContext}
+            actionReqsMap={actionReqsMap}
           />
         ) : null}
       </Popover.Body>

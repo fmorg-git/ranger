@@ -227,6 +227,39 @@
         }
       },
       "result": { "isAudited": true, "isAllowed": true, "policyId": -1 }
+    },
+    { "name": "ALLOW 'write s3v/iceberg/key2;' for user=svc-etl; inline-policy restricts action=PutObject",
+      "request": {
+        "resource": { "elements": { "volume": "s3v", "bucket": "iceberg", "key": "key2" } }, "user": "svc-etl", "accessType": "write", "action": "PutObject",
+        "inlinePolicy": { "grantor":  "r:data-all-access", "mode": "INLINE",
+          "grants": [
+            { "principals": [ "u:svc-etl" ], "resources": [ "key:s3v/iceberg/key2" ], "permissions": [ "all" ], "actions": [ "PutObject" ] }
+          ]
+        }
+      },
+      "result": { "isAudited": true, "isAllowed": true, "policyId": -1 }
+    },
+    { "name": "ALLOW 'create s3v/iceberg/key2;' for user=svc-etl; inline-policy restricts action=PutObject",
+      "request": {
+        "resource": { "elements": { "volume": "s3v", "bucket": "iceberg", "key": "key2" } }, "user": "svc-etl", "accessType": "create", "action": "PutObject",
+        "inlinePolicy": { "grantor":  "r:data-all-access", "mode": "INLINE",
+          "grants": [
+            { "principals": [ "u:svc-etl" ], "resources": [ "key:s3v/iceberg/key2" ], "permissions": [ "all" ], "actions": [ "PutObject" ] }
+          ]
+        }
+      },
+      "result": { "isAudited": true, "isAllowed": true, "policyId": -1 }
+    },
+    { "name": "DENY 'read s3v/iceberg/key2;' for user=svc-etl; inline-policy restricts action=PutObject but request action=GetObject",
+      "request": {
+        "resource": { "elements": { "volume": "s3v", "bucket": "iceberg", "key": "key2" } }, "user": "svc-etl", "accessType": "read", "action": "GetObject",
+        "inlinePolicy": { "grantor":  "r:data-all-access", "mode": "INLINE",
+          "grants": [
+            { "principals": [ "u:svc-etl" ], "resources": [ "key:s3v/iceberg/key2" ], "permissions": [ "all" ], "actions": [ "PutObject" ] }
+          ]
+        }
+      },
+      "result": { "isAudited": true, "isAllowed": false, "policyId": -1 }
     }
   ]
 }

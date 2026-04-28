@@ -677,6 +677,9 @@ function AccessGrantForm({
                             </Button>
                           </div>
                           {Object.keys(values.conditions).map((keyName) => {
+                            if (keyName === "action-matches") {
+                              return null;
+                            }
                             if (
                               values.conditions[keyName] != "" &&
                               values.conditions[keyName] != null

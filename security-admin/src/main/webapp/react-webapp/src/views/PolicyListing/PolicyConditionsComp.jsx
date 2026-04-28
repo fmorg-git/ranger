@@ -35,16 +35,25 @@ export default function PolicyConditionsComp(props) {
   const { policyConditionDetails, inputVal, showModal, handleCloseModal } =
     props;
 
+  const filteredPolicyConditionDetails = Array.isArray(policyConditionDetails)
+    ? policyConditionDetails.filter((c) => c?.name !== "action-matches")
+    : policyConditionDetails;
+
   const accessedOpt = [
     { value: "yes", label: "Yes" },
     { value: "no", label: "No" }
   ];
 
   const handleSubmit = (values) => {
-    for (let val in values.conditions) {
-      if (values.conditions[val] == null || values.conditions[val] == "") {
-        delete values.conditions[val];
+    if (values?.conditions) {
+      for (let val in values.conditions) {
+        if (values.conditions[val] == null || values.conditions[val] == "") {
+          delete values.conditions[val];
+        }
       }
+
+      // Never persist per-item-only conditions from the header editor
+      delete values.conditions["action-matches"];
     }
     inputVal.onChange(values.conditions);
     handleClose();
@@ -132,8 +141,8 @@ export default function PolicyConditionsComp(props) {
                 <Modal.Title>Policy Condition</Modal.Title>
               </Modal.Header>
               <Modal.Body>
-                {policyConditionDetails?.length > 0 &&
-                  policyConditionDetails.map((m) => {
+                {filteredPolicyConditionDetails?.length > 0 &&
+                  filteredPolicyConditionDetails.map((m) => {
                     let uiHintAttb =
                       m.uiHint != undefined && m.uiHint != ""
                         ? JSON.parse(m.uiHint)
